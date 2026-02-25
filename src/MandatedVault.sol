@@ -17,14 +17,12 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {IERCXXXXMandatedVault} from "./interfaces/IERCXXXXMandatedVault.sol";
 
 contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMandatedVault {
-
     bytes4 internal constant _ERC1271_MAGICVALUE = 0x1626ba7e;
     bytes32 internal constant _EMPTY_CODEHASH = keccak256("");
     bytes4 internal constant _SELECTOR_ALLOWLIST_ID = bytes4(keccak256("erc-xxxx:selector-allowlist@v1"));
-    bytes32 internal constant _MANDATE_TYPEHASH =
-        keccak256(
-            "Mandate(address executor,uint256 nonce,uint48 deadline,uint64 authorityEpoch,uint16 maxDrawdownBps,uint16 maxCumulativeDrawdownBps,bytes32 allowedAdaptersRoot,bytes32 payloadDigest,bytes32 extensionsHash)"
-        );
+    bytes32 internal constant _MANDATE_TYPEHASH = keccak256(
+        "Mandate(address executor,uint256 nonce,uint48 deadline,uint64 authorityEpoch,uint16 maxDrawdownBps,uint16 maxCumulativeDrawdownBps,bytes32 allowedAdaptersRoot,bytes32 payloadDigest,bytes32 extensionsHash)"
+    );
 
     // --------- Recommended input limits (DoS/gas grief mitigation) ---------
     // These limits are not part of Core semantics, but are included in the reference implementation
@@ -106,8 +104,7 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
-        return interfaceId == type(IERCXXXXMandatedVault).interfaceId
-            || interfaceId == type(IERC4626).interfaceId
+        return interfaceId == type(IERCXXXXMandatedVault).interfaceId || interfaceId == type(IERC4626).interfaceId
             || super.supportsInterface(interfaceId);
     }
 
@@ -243,7 +240,8 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
                     }
                     if (exts[i].id == _SELECTOR_ALLOWLIST_ID) {
                         hasSelectorAllowlist = true;
-                        try this.decodeSelectorAllowlist(exts[i].data) returns (bytes32 root, bytes32[][] memory proofs) {
+                        try this.decodeSelectorAllowlist(exts[i].data) returns (bytes32 root, bytes32[][] memory proofs)
+                        {
                             selectorRoot = root;
                             selectorProofs = proofs;
                         } catch {
@@ -363,11 +361,18 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
     }
 
     /// @dev External helper for try/catch decoding of selector allowlist extension data.
-    function decodeSelectorAllowlist(bytes calldata data) external pure returns (bytes32 root, bytes32[][] memory proofs) {
+    function decodeSelectorAllowlist(bytes calldata data)
+        external
+        pure
+        returns (bytes32 root, bytes32[][] memory proofs)
+    {
         (root, proofs) = abi.decode(data, (bytes32, bytes32[][]));
     }
 
-    function _enforceSelectorAllowlist(Action[] calldata actions, bytes32 root, bytes32[][] memory proofs) internal pure {
+    function _enforceSelectorAllowlist(Action[] calldata actions, bytes32 root, bytes32[][] memory proofs)
+        internal
+        pure
+    {
         if (proofs.length != actions.length) revert InvalidExtensionsEncoding();
         for (uint256 i = 0; i < actions.length;) {
             if (proofs[i].length > MAX_SELECTOR_PROOF_DEPTH) {

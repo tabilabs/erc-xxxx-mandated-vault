@@ -14,12 +14,7 @@ contract DeployMandatedVault is Script {
 
         vm.startBroadcast();
 
-        MandatedVault vault = new MandatedVault(
-            IERC20(asset),
-            name,
-            symbol,
-            authority
-        );
+        MandatedVault vault = new MandatedVault(IERC20(asset), name, symbol, authority);
 
         console.log("MandatedVault deployed at:", address(vault));
         console.log("Authority:", authority);

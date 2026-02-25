@@ -14,8 +14,14 @@ import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 /// @dev Simple ERC-20 for testing.
 contract MockToken is ERC20 {
     constructor() ERC20("Mock Token", "MOCK") {}
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
-    function burn(address from, uint256 amount) external { _burn(from, amount); }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        _burn(from, amount);
+    }
 }
 
 /// @dev ERC-1271 contract authority for testing contract-based signatures.
@@ -575,9 +581,8 @@ contract MandatedVaultTest is Test {
         MockERC1271Authority contractAuth = new MockERC1271Authority(authority);
 
         // Deploy vault with contract authority
-        MandatedVault contractVault = new MandatedVault(
-            IERC20(address(token)), "Contract Auth Vault", "caV", address(contractAuth)
-        );
+        MandatedVault contractVault =
+            new MandatedVault(IERC20(address(token)), "Contract Auth Vault", "caV", address(contractAuth));
         token.mint(address(contractVault), 1_000_000e18);
 
         // Create adapter allowlist for this vault
@@ -617,18 +622,21 @@ contract MandatedVaultTest is Test {
 
     function test_revert_erc1271InvalidSignature() public {
         MockERC1271Authority contractAuth = new MockERC1271Authority(authority);
-        MandatedVault contractVault = new MandatedVault(
-            IERC20(address(token)), "CA Vault", "caV", address(contractAuth)
-        );
+        MandatedVault contractVault =
+            new MandatedVault(IERC20(address(token)), "CA Vault", "caV", address(contractAuth));
         token.mint(address(contractVault), 1_000_000e18);
 
         bytes32 leaf = keccak256(abi.encode(address(adapter), address(adapter).codehash));
 
         IERCXXXXMandatedVault.Mandate memory mandate = IERCXXXXMandatedVault.Mandate({
-            executor: executor, nonce: 0, deadline: 0,
+            executor: executor,
+            nonce: 0,
+            deadline: 0,
             authorityEpoch: contractVault.authorityEpoch(),
-            maxDrawdownBps: 500, maxCumulativeDrawdownBps: 1000,
-            allowedAdaptersRoot: leaf, payloadDigest: bytes32(0),
+            maxDrawdownBps: 500,
+            maxCumulativeDrawdownBps: 1000,
+            allowedAdaptersRoot: leaf,
+            payloadDigest: bytes32(0),
             extensionsHash: keccak256("")
         });
 
@@ -642,7 +650,8 @@ contract MandatedVaultTest is Test {
 
         IERCXXXXMandatedVault.Action[] memory actions = new IERCXXXXMandatedVault.Action[](1);
         actions[0] = IERCXXXXMandatedVault.Action({
-            adapter: address(adapter), value: 0,
+            adapter: address(adapter),
+            value: 0,
             data: abi.encodeCall(MockAdapter.doNothing, ())
         });
 
@@ -655,11 +664,7 @@ contract MandatedVaultTest is Test {
 
     function test_revert_unsupportedRequiredExtension() public {
         IERCXXXXMandatedVault.Extension[] memory exts = new IERCXXXXMandatedVault.Extension[](1);
-        exts[0] = IERCXXXXMandatedVault.Extension({
-            id: bytes4(0xdeadbeef),
-            required: true,
-            data: ""
-        });
+        exts[0] = IERCXXXXMandatedVault.Extension({id: bytes4(0xdeadbeef), required: true, data: ""});
         bytes memory encodedExts = abi.encode(exts);
 
         IERCXXXXMandatedVault.Mandate memory mandate = _defaultMandate(0);
@@ -667,19 +672,15 @@ contract MandatedVaultTest is Test {
         bytes memory sig = _signMandate(mandate);
 
         vm.prank(executor);
-        vm.expectRevert(abi.encodeWithSelector(
-            IERCXXXXMandatedVault.UnsupportedRequiredExtension.selector, bytes4(0xdeadbeef)
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(IERCXXXXMandatedVault.UnsupportedRequiredExtension.selector, bytes4(0xdeadbeef))
+        );
         vault.execute(mandate, _defaultActions(), sig, _defaultProofs(), encodedExts);
     }
 
     function test_optionalExtensionIgnored() public {
         IERCXXXXMandatedVault.Extension[] memory exts = new IERCXXXXMandatedVault.Extension[](1);
-        exts[0] = IERCXXXXMandatedVault.Extension({
-            id: bytes4(0xdeadbeef),
-            required: false,
-            data: "some data"
-        });
+        exts[0] = IERCXXXXMandatedVault.Extension({id: bytes4(0xdeadbeef), required: false, data: "some data"});
         bytes memory encodedExts = abi.encode(exts);
 
         IERCXXXXMandatedVault.Mandate memory mandate = _defaultMandate(0);
@@ -795,9 +796,11 @@ contract MandatedVaultTest is Test {
         bytes memory sig = _signMandate(mandate);
 
         vm.prank(executor);
-        vm.expectRevert(abi.encodeWithSelector(
-            MandatedVault.SelectorNotAllowed.selector, 0, address(adapter), MockAdapter.alwaysReverts.selector
-        ));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                MandatedVault.SelectorNotAllowed.selector, 0, address(adapter), MockAdapter.alwaysReverts.selector
+            )
+        );
         vault.execute(mandate, actions, sig, _defaultProofs(), encodedExts);
     }
 
@@ -895,11 +898,7 @@ contract MandatedVaultTest is Test {
 
         IERCXXXXMandatedVault.Extension[] memory exts = new IERCXXXXMandatedVault.Extension[](n);
         for (uint256 i = 0; i < n; i++) {
-            exts[i] = IERCXXXXMandatedVault.Extension({
-                id: bytes4(uint32(i + 1)),
-                required: false,
-                data: ""
-            });
+            exts[i] = IERCXXXXMandatedVault.Extension({id: bytes4(uint32(i + 1)), required: false, data: ""});
         }
         bytes memory encodedExts = abi.encode(exts);
 
@@ -1030,9 +1029,7 @@ contract MandatedVaultTest is Test {
         mandate2.allowedAdaptersRoot = root;
         bytes memory sig2 = _signMandate(mandate2);
 
-        bytes memory reentrantCalldata = abi.encodeCall(
-            vault.execute, (mandate2, actions, sig2, proofs, "")
-        );
+        bytes memory reentrantCalldata = abi.encodeCall(vault.execute, (mandate2, actions, sig2, proofs, ""));
         reentrant.setReentrantCalldata(reentrantCalldata);
 
         vm.prank(executor);
@@ -1131,24 +1128,27 @@ contract MandatedVaultTest is Test {
 
     function test_revert_erc1271ShortReturn() public {
         ShortReturnAuthority shortAuth = new ShortReturnAuthority();
-        MandatedVault shortVault = new MandatedVault(
-            IERC20(address(token)), "Short Auth", "sV", address(shortAuth)
-        );
+        MandatedVault shortVault = new MandatedVault(IERC20(address(token)), "Short Auth", "sV", address(shortAuth));
         token.mint(address(shortVault), 1_000_000e18);
 
         bytes32 leaf = keccak256(abi.encode(address(adapter), address(adapter).codehash));
 
         IERCXXXXMandatedVault.Mandate memory mandate = IERCXXXXMandatedVault.Mandate({
-            executor: executor, nonce: 0, deadline: 0,
+            executor: executor,
+            nonce: 0,
+            deadline: 0,
             authorityEpoch: shortVault.authorityEpoch(),
-            maxDrawdownBps: 500, maxCumulativeDrawdownBps: 1000,
-            allowedAdaptersRoot: leaf, payloadDigest: bytes32(0),
+            maxDrawdownBps: 500,
+            maxCumulativeDrawdownBps: 1000,
+            allowedAdaptersRoot: leaf,
+            payloadDigest: bytes32(0),
             extensionsHash: keccak256("")
         });
 
         IERCXXXXMandatedVault.Action[] memory actions = new IERCXXXXMandatedVault.Action[](1);
         actions[0] = IERCXXXXMandatedVault.Action({
-            adapter: address(adapter), value: 0,
+            adapter: address(adapter),
+            value: 0,
             data: abi.encodeCall(MockAdapter.doNothing, ())
         });
 
@@ -1189,11 +1189,7 @@ contract MandatedVaultTest is Test {
         bytes32 root = leaf;
 
         IERCXXXXMandatedVault.Action[] memory actions = new IERCXXXXMandatedVault.Action[](1);
-        actions[0] = IERCXXXXMandatedVault.Action({
-            adapter: eoaAdapter,
-            value: 0,
-            data: ""
-        });
+        actions[0] = IERCXXXXMandatedVault.Action({adapter: eoaAdapter, value: 0, data: ""});
 
         IERCXXXXMandatedVault.Mandate memory mandate = _defaultMandate(0);
         mandate.allowedAdaptersRoot = root;
@@ -1391,11 +1387,7 @@ contract MandatedVaultTest is Test {
 
         // Pass non-empty extensions that DON'T match the mandate's extensionsHash
         IERCXXXXMandatedVault.Extension[] memory exts = new IERCXXXXMandatedVault.Extension[](1);
-        exts[0] = IERCXXXXMandatedVault.Extension({
-            id: bytes4(0x12345678),
-            required: false,
-            data: ""
-        });
+        exts[0] = IERCXXXXMandatedVault.Extension({id: bytes4(0x12345678), required: false, data: ""});
         bytes memory encodedExts = abi.encode(exts);
         // keccak256(encodedExts) != mandate.extensionsHash (which is keccak256(""))
 

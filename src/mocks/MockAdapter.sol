@@ -14,9 +14,7 @@ contract MockAdapter {
     /// @notice Transfers ERC-20 tokens from the vault (caller) to a recipient.
     /// @dev The vault must have approved this adapter or hold the tokens directly.
     function transferToken(address token, address to, uint256 amount) external {
-        (bool ok, bytes memory ret) = token.call(
-            abi.encodeWithSignature("transfer(address,uint256)", to, amount)
-        );
+        (bool ok, bytes memory ret) = token.call(abi.encodeWithSignature("transfer(address,uint256)", to, amount));
         require(ok && (ret.length == 0 || abi.decode(ret, (bool))), "transfer failed");
     }
 

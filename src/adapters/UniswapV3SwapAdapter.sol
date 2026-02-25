@@ -35,13 +35,10 @@ contract UniswapV3SwapAdapter {
     /// @notice Execute a single-hop exact-input swap on Uniswap V3.
     /// @dev The vault must have approved this adapter to spend `amountIn` of `tokenIn`.
     ///      Swapped tokens are sent directly back to `msg.sender` (the vault).
-    function swap(
-        address tokenIn,
-        address tokenOut,
-        uint24 fee,
-        uint256 amountIn,
-        uint256 amountOutMinimum
-    ) external returns (uint256 amountOut) {
+    function swap(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint256 amountOutMinimum)
+        external
+        returns (uint256 amountOut)
+    {
         IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
         IERC20(tokenIn).forceApprove(address(SWAP_ROUTER), amountIn);
 

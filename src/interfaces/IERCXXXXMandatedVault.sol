@@ -6,8 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @title IERCXXXXMandatedVault
 /// @notice Minimal interface for risk-constrained delegated strategy execution on ERC-4626 vaults.
-interface IERCXXXXMandatedVault /* is IERC4626, IERC165 */ {
-
+interface IERCXXXXMandatedVault { /* is IERC4626, IERC165 */
     // --------- Structs ---------
 
     struct Action {
