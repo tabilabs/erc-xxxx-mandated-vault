@@ -6,8 +6,8 @@ out/
 broadcast/
 broadcast/*/
 
-# Docs
-docs/
+# Forge doc output (keep docs/*.md for spec drafts)
+docs/book/
 
 # Dotenv file
 .env
