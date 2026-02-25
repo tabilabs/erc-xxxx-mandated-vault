@@ -1,0 +1,23 @@
+# Compiler output
+cache/
+out/
+
+# Ignores development broadcast logs
+broadcast/
+broadcast/*/
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
