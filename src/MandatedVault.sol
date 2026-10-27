@@ -9,6 +9,7 @@ import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -32,6 +33,8 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
     uint256 public constant MAX_ADAPTER_PROOF_DEPTH = 64;
     uint256 public constant MAX_SELECTOR_PROOF_DEPTH = 64;
     uint256 public constant MAX_EXTENSIONS_BYTES = 131_072; // 128 KiB
+// Upper bound for revert data bubbled from a failing action (see _copyReturnData).
+uint256 public constant MAX_RETURNDATA_BYTES = 4096;
 
     event NativeSwept(address indexed to, uint256 amount);
 
@@ -328,14 +331,31 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
         // Single-execution drawdown check
         if (preAssets != 0 && preAssets > postAssets) {
             uint256 loss = preAssets - postAssets;
-            if (loss * 10_000 > preAssets * uint256(mandate.maxDrawdownBps)) revert DrawdownExceeded();
+            // Exact rational comparison `loss * 10_000 > preAssets * maxDrawdownBps`,
+            // evaluated overflow-safely via mulDiv + mulMod remainder (identical
+            // semantics to the plain cross-multiplication, which overflow-reverts
+            // on tokens with very large supply and thereby DoSes the breaker).
+            uint256 lossBps = Math.mulDiv(loss, 10_000, preAssets);
+            uint256 lossBpsRemainder = mulmod(loss, 10_000, preAssets);
+            if (
+                lossBps > uint256(mandate.maxDrawdownBps)
+                    || (lossBps == uint256(mandate.maxDrawdownBps) && lossBpsRemainder != 0)
+            ) {
+                revert DrawdownExceeded();
+            }
         }
 
         // Cumulative drawdown check (epoch-based high-water mark)
         uint256 eAssets = _epochAssets;
         if (eAssets != 0 && eAssets > postAssets) {
             uint256 cumulativeLoss = eAssets - postAssets;
-            if (cumulativeLoss * 10_000 > eAssets * uint256(mandate.maxCumulativeDrawdownBps)) {
+            // See the comment above: exact comparison via mulDiv/mulMod.
+            uint256 lossBps = Math.mulDiv(cumulativeLoss, 10_000, eAssets);
+            uint256 lossBpsRemainder = mulmod(cumulativeLoss, 10_000, eAssets);
+            if (
+                lossBps > uint256(mandate.maxCumulativeDrawdownBps)
+                    || (lossBps == uint256(mandate.maxCumulativeDrawdownBps) && lossBpsRemainder != 0)
+            ) {
                 revert CumulativeDrawdownExceeded();
             }
         }
@@ -394,9 +414,15 @@ contract MandatedVault is ERC4626, ERC165, EIP712, ReentrancyGuard, IERCXXXXMand
         }
     }
 
+    /// @dev Copies return data from the last external call into a `bytes memory`.
+    ///      Capped at MAX_RETURNDATA_BYTES to prevent gas griefing via oversized
+    ///      return data from an allowlisted adapter (parity with MandatedVaultClone).
     function _copyReturnData() internal pure returns (bytes memory ret) {
         assembly ("memory-safe") {
             let size := returndatasize()
+            // Cap copied returndata so a failing adapter cannot burn tens of
+            // thousands of gas merely by bubbling oversized reverts.
+            if gt(size, MAX_RETURNDATA_BYTES) { size := MAX_RETURNDATA_BYTES }
             ret := mload(0x40)
             mstore(ret, size)
             let dst := add(ret, 0x20)

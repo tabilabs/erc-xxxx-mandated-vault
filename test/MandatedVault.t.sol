@@ -406,7 +406,8 @@ contract MandatedVaultTest is Test {
         bytes memory sig = _signMandate(mandate);
 
         vm.prank(executor);
-        vm.expectRevert(); // ActionCallFailed
+        // ActionCallFailed bubbles the mocked revert payload of the failing adapter, so only the selector is pinned.
+        vm.expectPartialRevert(IERCXXXXMandatedVault.ActionCallFailed.selector);
         vault.execute(mandate, actions, sig, _defaultProofs(), "");
     }
 
@@ -1359,7 +1360,8 @@ contract MandatedVaultTest is Test {
         bytes memory sig = _signMandate(mandate);
 
         vm.prank(executor);
-        vm.expectRevert(); // ActionCallFailed for index 1
+        // Second action at index 1 fails: bubble wrapped in ActionCallFailed(uint256,bytes), selector-only check.
+        vm.expectPartialRevert(IERCXXXXMandatedVault.ActionCallFailed.selector);
         vault.execute(mandate, actions, sig, proofs, "");
 
         // Nonce should NOT be consumed (entire tx reverted)
